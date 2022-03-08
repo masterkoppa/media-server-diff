@@ -103,12 +103,7 @@ fn should_inspect_file(entry: &DirEntry) -> bool {
     !entry.file_type().is_dir() && !entry.file_name().to_str().unwrap().ends_with(".nfo")
 }
 
-/// Format the duration in a human readable format
-/// 
-/// ```
-/// let days = Duration::from_seconds(115197);
-/// assert_eq!(format_duration(&days), String::from("01:00:00:00"))
-/// ```
+/// Format the duration in a specified human readable format
 fn format_duration(duration: &Duration) -> String {
     let mut result = String::default();
 
