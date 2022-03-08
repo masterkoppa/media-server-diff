@@ -124,12 +124,11 @@ fn format_duration(duration: &Duration) -> String {
         result.push_str(&format!("{:02}:", hours % 24));
     }
 
-    if minutes > 0 {
-        result.push_str(&format!("{:02}:", minutes % 60));
-    }
+    result.push_str(&format!("{:02}:", minutes % 60));
+    result.push_str(&format!("{:02}", duration.as_secs() % 60));
 
-    if duration.as_secs() as f64 > 0.0 {
-        result.push_str(&format!("{:02}", (duration.as_secs() % 60) as f64 + (duration.subsec_nanos() as f64 * 1e-9)));
+    if duration.subsec_nanos() as f64 * 1e-7 > 0.0 {
+        result.push_str(&format!(".{}", duration.subsec_nanos() as f64 * 1e-7));
     }
 
     result
@@ -168,7 +167,7 @@ mod test {
 
     #[test]
     fn test_seconds() {
-        let seconds = Duration::from_secs_f32(11.12);
-        assert_eq!(format_duration(&seconds), "11.12");
+        let seconds = Duration::from_secs_f32(1.12);
+        assert_eq!(format_duration(&seconds), "00:01.12");
     }
 }
