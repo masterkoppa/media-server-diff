@@ -21,6 +21,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # Following the build instructions from ffmpeg-next
+      # Source: https://github.com/zmwangx/rust-ffmpeg/wiki/Notes-on-building
+      - name: Install ffmpeg
+        run: apt install -y clang libavcodec-dev libavformat-dev libavutil-dev pkg-config
+
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
