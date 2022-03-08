@@ -128,7 +128,7 @@ fn format_duration(duration: &Duration) -> String {
     result.push_str(&format!("{:02}", duration.as_secs() % 60));
 
     if duration.subsec_nanos() as f64 * 1e-7 > 0.0 {
-        result.push_str(&format!(".{}", duration.subsec_nanos() as f64 * 1e-7));
+        result.push_str(&format!(".{}", (duration.subsec_nanos() as f64 * 1e-7) as u64));
     }
 
     result
@@ -169,5 +169,8 @@ mod test {
     fn test_seconds() {
         let seconds = Duration::from_secs_f32(1.12);
         assert_eq!(format_duration(&seconds), "00:01.12");
+
+        let seconds_leftover = Duration::from_secs_f32(1.1233);
+        assert_eq!(format_duration(&seconds_leftover), "00:01.12");
     }
 }
