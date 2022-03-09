@@ -103,6 +103,17 @@ fn should_inspect_file(entry: &DirEntry) -> bool {
     !entry.file_type().is_dir() && !entry.file_name().to_str().unwrap().ends_with(".nfo")
 }
 
+/// Format a base 10 bit rate number into a human readable format
+fn format_bit_rate(bit_rate: i64) -> String {
+    if bit_rate > 1_000_000 {
+        format!("{:.2} MB/s", (bit_rate as f64) / 1_000_000.0)
+    } else if bit_rate > 1000 {
+        format!("{:.2} KB/s", (bit_rate as f64) / 1_000.0)
+    } else {
+        format!("{} B/s", bit_rate)
+    }
+}
+
 /// Format the duration in a specified human readable format
 fn format_duration(duration: &Duration) -> String {
     let mut result = String::default();
@@ -167,5 +178,23 @@ mod test {
 
         let seconds_leftover = Duration::from_secs_f32(1.1233);
         assert_eq!(format_duration(&seconds_leftover), "00:01.12");
+    }
+
+    #[test]
+    fn test_megabytes() {
+        let megabytes_per_sec = 12_000_000;
+        assert_eq!(format_bit_rate(megabytes_per_sec), "12.00 MB/s")
+    }
+
+    #[test]
+    fn test_kilobytes() {
+        let kilobytes_per_sec = 12_000;
+        assert_eq!(format_bit_rate(kilobytes_per_sec), "12.00 KB/s")
+    }
+
+    #[test]
+    fn test_bytes() {
+        let bytes_per_sec = 12;
+        assert_eq!(format_bit_rate(bytes_per_sec), "12 B/s")
     }
 }
