@@ -7,7 +7,6 @@ use std::path::PathBuf;
 use walkdir::{DirEntry, WalkDir};
 use rayon::prelude::*;
 use tracing::{info,instrument,debug,warn};
-use tracing_subscriber;
 use std::time::Duration;
 
 /// Utility to generate reports on the media file contents for a folder
@@ -69,10 +68,6 @@ fn generate_report(path: PathBuf) -> Option<String> {
 fn analyze_path(path: &PathBuf) -> Option<String> {
     match ffmpeg::format::input(path) {
         Ok(context) => {
-            for (k, v) in context.metadata().iter() {
-                debug!("{}: {}", k, v);
-            }
-
             debug!(mime_types = context.format().mime_types().join(",").as_str());
 
             if !context.format().mime_types().into_iter().any(|mime_type| {
@@ -82,11 +77,52 @@ fn analyze_path(path: &PathBuf) -> Option<String> {
                 ()
             }
 
-            let file_name = path.file_name();
-            let duration = Duration::from_micros(context.duration().try_into().unwrap_or(0));
-            let duration_fmt = format_duration(&duration);
+            let file_name = path.to_string_lossy();
+            let duration = format_duration(&Duration::from_micros(
+                context.duration()
+                    .try_into()
+                    .unwrap_or(0)
+            ));
 
-            todo!("Implement formatting")
+            let bit_rate =  format_bit_rate(context.bit_rate());
+
+            let mut stream_descriptions: Vec<String> = vec!();
+
+            // Calculate the best "streams" available
+            if let Some(stream) = context.streams().best(ffmpeg::media::Type::Video) {
+                println!("Best video stream index: {}", stream.index());
+                stream_descriptions.push(format!("Video: {} kb/s", stream.rate()));
+
+                for (k, v) in stream.metadata().iter() {
+                    debug!("{}: {}", k, v);
+                }
+            }
+
+            if let Some(stream) = context.streams().best(ffmpeg::media::Type::Audio) {
+                println!("Best video stream index: {}", stream.index());
+                stream_descriptions.push(format!("Audio: {} kb/s", stream.rate()));
+
+                for (k, v) in stream.metadata().iter() {
+                    debug!("{}: {}", k, v);
+                }
+            }
+
+            for stream in context.streams() {
+                debug!("Stream Index: {}", stream.index());
+                for (k, v) in stream.metadata().iter() {
+                    debug!("{}: {}", k, v);
+                }
+
+                
+            }
+
+            Some(format!(
+                "{}\n\tDuration: {}\n\tBit rate: {}\n\t{}",
+                file_name,
+                duration,
+                bit_rate,
+                stream_descriptions.join("\n\t")
+            ))
         }
         Err(_) => {
             warn!("Error processing file, ignoring");
