@@ -1,13 +1,13 @@
-extern crate ffmpeg_next as ffmpeg;
 extern crate clap;
+extern crate ffmpeg_next as ffmpeg;
 extern crate walkdir;
 
 use clap::Parser;
-use std::path::PathBuf;
-use walkdir::{DirEntry, WalkDir};
 use rayon::prelude::*;
-use tracing::{info,instrument,debug,warn};
+use std::path::PathBuf;
 use std::time::Duration;
+use tracing::{debug, info, instrument, warn};
+use walkdir::{DirEntry, WalkDir};
 
 /// Utility to generate reports on the media file contents for a folder
 /// which can be diffed using traditional tools, like diff
@@ -33,28 +33,29 @@ fn main() {
 fn generate_report(path: PathBuf) -> Option<String> {
     if !path.is_dir() {}
 
-    let paths: Vec<PathBuf> = WalkDir::new(path).into_iter().filter_map(|e| {
-        match e {
+    let paths: Vec<PathBuf> = WalkDir::new(path)
+        .into_iter()
+        .filter_map(|e| match e {
             Ok(result) => {
                 if should_inspect_file(&result) {
                     Some(result.into_path())
                 } else {
                     None
                 }
-            },
+            }
             Err(error) => {
-                warn!(path = error.path().unwrap().to_str().unwrap(), "Permissions error");
+                warn!(
+                    path = error.path().unwrap().to_str().unwrap(),
+                    "Permissions error"
+                );
                 None
             }
-        }
-    }).collect();
-
-    debug!(num_paths = paths.len(), "Discovered path count");
-    
-    let results: Vec<_> = paths.par_iter()
-        .filter_map(analyze_path)
+        })
         .collect();
 
+    debug!(num_paths = paths.len(), "Discovered path count");
+
+    let results: Vec<_> = paths.par_iter().filter_map(analyze_path).collect();
 
     Some(results.join("\n"))
 }
@@ -74,51 +75,17 @@ fn analyze_path(path: &PathBuf) -> Option<String> {
                 mime_type.starts_with("audio") || mime_type.starts_with("video")
             }) {}
 
+            // Filename + path from the root
             let file_name = path.to_string_lossy();
             let duration = format_duration(&Duration::from_micros(
-                context.duration()
-                    .try_into()
-                    .unwrap_or(0)
+                context.duration().try_into().unwrap_or(0),
             ));
 
-            let bit_rate =  format_bit_rate(context.bit_rate());
-
-            let mut stream_descriptions: Vec<String> = vec!();
-
-            // Calculate the best "streams" available
-            if let Some(stream) = context.streams().best(ffmpeg::media::Type::Video) {
-                println!("Best video stream index: {}", stream.index());
-                stream_descriptions.push(format!("Video: {} kb/s", stream.rate()));
-
-                for (k, v) in stream.metadata().iter() {
-                    debug!("{}: {}", k, v);
-                }
-            }
-
-            if let Some(stream) = context.streams().best(ffmpeg::media::Type::Audio) {
-                println!("Best video stream index: {}", stream.index());
-                stream_descriptions.push(format!("Audio: {} kb/s", stream.rate()));
-
-                for (k, v) in stream.metadata().iter() {
-                    debug!("{}: {}", k, v);
-                }
-            }
-
-            for stream in context.streams() {
-                debug!("Stream Index: {}", stream.index());
-                for (k, v) in stream.metadata().iter() {
-                    debug!("{}: {}", k, v);
-                }
-
-                
-            }
+            let bit_rate = format_bit_rate(context.bit_rate());
 
             Some(format!(
-                "{}\n\tDuration: {}\n\tBit rate: {}\n\t{}",
-                file_name,
-                duration,
-                bit_rate,
-                stream_descriptions.join("\n\t")
+                "{}\n\tDuration: {}\n\tBit rate: {}",
+                file_name, duration, bit_rate,
             ))
         }
         Err(_) => {
@@ -127,7 +94,6 @@ fn analyze_path(path: &PathBuf) -> Option<String> {
         }
     }
 }
-
 
 /// Validates if a given DirEntry should be used for diff purposes
 /// This is a simple filter, for non-file entries and .nfo files. As needs
@@ -167,7 +133,10 @@ fn format_duration(duration: &Duration) -> String {
     result.push_str(&format!("{:02}", duration.as_secs() % 60));
 
     if duration.subsec_nanos() as f64 * 1e-7 > 0.0 {
-        result.push_str(&format!(".{}", (duration.subsec_nanos() as f64 * 1e-7) as u64));
+        result.push_str(&format!(
+            ".{}",
+            (duration.subsec_nanos() as f64 * 1e-7) as u64
+        ));
     }
 
     result
