@@ -31,9 +31,7 @@ fn main() {
 }
 
 fn generate_report(path: PathBuf) -> Option<String> {
-    if !path.is_dir() {
-        ()
-    }
+    if !path.is_dir() {}
 
     let paths: Vec<PathBuf> = WalkDir::new(path).into_iter().filter_map(|e| {
         match e {
@@ -54,7 +52,7 @@ fn generate_report(path: PathBuf) -> Option<String> {
     debug!(num_paths = paths.len(), "Discovered path count");
     
     let results: Vec<_> = paths.par_iter()
-        .filter_map(|path| analyze_path(path))
+        .filter_map(analyze_path)
         .collect();
 
 
@@ -65,6 +63,7 @@ fn generate_report(path: PathBuf) -> Option<String> {
 /// be used to differentiate between multiple copies of the same data set
 /// that have diverged
 #[instrument]
+#[allow(clippy::ptr_arg)]
 fn analyze_path(path: &PathBuf) -> Option<String> {
     match ffmpeg::format::input(path) {
         Ok(context) => {
@@ -73,9 +72,7 @@ fn analyze_path(path: &PathBuf) -> Option<String> {
             if !context.format().mime_types().into_iter().any(|mime_type| {
                 // If mime types are available, ensure that they are valid for our purposes
                 mime_type.starts_with("audio") || mime_type.starts_with("video")
-            }) {
-                ()
-            }
+            }) {}
 
             let file_name = path.to_string_lossy();
             let duration = format_duration(&Duration::from_micros(
